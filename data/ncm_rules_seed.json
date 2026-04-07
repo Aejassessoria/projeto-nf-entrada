@@ -1,0 +1,42 @@
+[
+  {
+    "ncm": "84",
+    "classificacao": "IMOBILIZADO",
+    "descricao": "Capítulo 84 — Máquinas e equipamentos mecânicos (valor > 1200 considerado imobilizado)"
+  },
+  {
+    "ncm": "85",
+    "classificacao": "IMOBILIZADO",
+    "descricao": "Capítulo 85 — Máquinas e equipamentos elétricos"
+  },
+  {
+    "ncm": "87",
+    "classificacao": "IMOBILIZADO",
+    "descricao": "Capítulo 87 — Veículos automóveis"
+  },
+  {
+    "ncm": "90",
+    "classificacao": "IMOBILIZADO",
+    "descricao": "Capítulo 90 — Instrumentos ópticos e de precisão"
+  },
+  {
+    "ncm": "94",
+    "classificacao": "IMOBILIZADO",
+    "descricao": "Capítulo 94 — Móveis e mobiliário"
+  },
+  {
+    "ncm": "27",
+    "classificacao": "USO E CONSUMO",
+    "descricao": "Capítulo 27 — Combustíveis minerais"
+  },
+  {
+    "ncm": "34",
+    "classificacao": "USO E CONSUMO",
+    "descricao": "Capítulo 34 — Sabões, detergentes e produtos de limpeza"
+  },
+  {
+    "ncm": "48",
+    "classificacao": "USO E CONSUMO",
+    "descricao": "Capítulo 48 — Papel e cartão"
+  }
+]

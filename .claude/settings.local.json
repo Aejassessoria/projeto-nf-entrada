@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(py --version)",
+      "Bash(python3 -m pip install -r \"c:/Users/Usuario/Desktop/PROJETOS IA/Projeto NF Entrada/requirements.txt\" -q)",
+      "Read(//c/Users/Usuario/AppData/Local/Programs/**)",
+      "Bash(ls /c/Python*)",
+      "Read(//c/Users/Usuario/**)",
+      "Bash(find /c/Users/Usuario -name python*.exe)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py''\\).read\\(\\)\\); print\\(''Sintaxe OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''Sintaxe OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\(''app.py'', encoding=''utf-8''\\).read\\(\\)\\) and ast.parse\\(open\\(''src/classifier.py'', encoding=''utf-8''\\).read\\(\\)\\) and ast.parse\\(open\\(''src/database.py'', encoding=''utf-8''\\).read\\(\\)\\) and ast.parse\\(open\\(''src/receita_federal.py'', encoding=''utf-8''\\).read\\(\\)\\); print\\(''OK''\\)\")",
+      "Bash(python -m streamlit --version)",
+      "Bash(python -c \"import streamlit; print\\(''streamlit ok''\\)\")",
+      "Bash(py -3.11 -m streamlit --version)",
+      "Bash(ipconfig)",
+      "Bash(tasklist)",
+      "Bash(py -3.11 -m pip show streamlit)",
+      "Bash(py -3.11 -c \"import ngrok\")",
+      "Bash(py -3.11 -m streamlit run app.py --server.headless true --server.maxUploadSize 1024)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 14816 /F)",
+      "Bash(cmd /c \"taskkill /PID 14816 /F\")",
+      "Bash(cmd /c \"wmic process where ProcessId=14816 get Name,CommandLine 2>&1\")",
+      "Bash(cmd /c \"wmic process where \"\"ProcessId=14816\"\" get Name,CommandLine\")",
+      "Bash(powershell -Command \"Get-Process -Id 14816 | Select-Object Name, CPU, MainWindowTitle\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14816 -Force\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 8502 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_-Force -ErrorAction SilentlyContinue }\")",
+      "Bash(powershell -Command \"Get-NetTCPConnection -LocalPort 8502 -ErrorAction SilentlyContinue | Select-Object OwningProcess\")",
+      "Bash(powershell -Command \"Stop-Process -Id 14476 -Force\")",
+      "Bash(py -3.11 -m streamlit run app.py --server.headless true --server.maxUploadSize 1024 --server.port 8501)",
+      "Bash(cmd /c \"tasklist | findstr ngrok\")",
+      "Bash(cmd /c \"ngrok http 8501\")"
+    ]
+  }
+}
