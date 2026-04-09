@@ -555,18 +555,34 @@ elif pagina == "Regras por NCM":
         cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra", on_change=_fmt_cnpj_input)
         cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
         cnpj_regra = None
+        nome_exibir = ''
         if cnpj_limpo == '':
             cnpj_regra = ''
             st.caption("Regra global — aplicada a todas as empresas.")
+        elif len(cnpj_limpo) < 14:
+            # Mostra preview formatado enquanto digita
+            d = cnpj_limpo
+            if len(d) <= 2:
+                preview = d
+            elif len(d) <= 5:
+                preview = f"{d[:2]}.{d[2:]}"
+            elif len(d) <= 8:
+                preview = f"{d[:2]}.{d[2:5]}.{d[5:]}"
+            elif len(d) <= 12:
+                preview = f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:]}"
+            else:
+                preview = f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
+            st.caption(f"Digite os 14 dígitos — `{preview}`")
         elif len(cnpj_limpo) == 14:
             with st.spinner("Consultando empresa..."):
                 from src.database_pg import buscar_cliente as _buscar_cliente
                 info = _buscar_cliente(cnpj_limpo) or consultar_cnpj(cnpj_limpo)
-            nome_exibir = info.get('razao_social', cnpj_limpo) if info else cnpj_limpo
-            st.caption(f"Empresa: **{nome_exibir}**")
-            cnpj_regra = cnpj_limpo
-        else:
-            st.caption("Digite os 14 dígitos do CNPJ.")
+            if info:
+                nome_exibir = info.get('razao_social', cnpj_limpo)
+                st.caption(f"Empresa: **{nome_exibir}**")
+                cnpj_regra = cnpj_limpo
+            else:
+                st.error("CNPJ não encontrado na Receita Federal.")
 
         class_nova = st.selectbox("Classificação", [RESULTADO_IMOBILIZADO, RESULTADO_USO_CONSUMO, RESULTADO_REVENDA])
         desc_nova = st.text_input("Descrição", placeholder="Ex: Câmeras e lentes ópticas")
