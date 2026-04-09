@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import re
 import os, sys
 import unicodedata
 import io, contextlib
@@ -500,6 +501,16 @@ if pagina == "Classificar Notas":
                 if '_hist' in df_exp.columns:
                     df_exp = df_exp.rename(columns={'_hist': 'historico'})
                 df_exp = df_exp.sort_values('classificacao', kind='stable') if 'classificacao' in df_exp.columns else df_exp
+
+                # Formata CNPJs com máscara para evitar notação científica no Excel
+                def _fmt_cnpj(v):
+                    c = re.sub(r'\D', '', str(v)) if pd.notna(v) else ''
+                    if len(c) == 14:
+                        return f"{c[:2]}.{c[2:5]}.{c[5:8]}/{c[8:12]}-{c[12:]}"
+                    return v
+                for col_cnpj in ['cnpj_emitente', 'cnpj_destinatario']:
+                    if col_cnpj in df_exp.columns:
+                        df_exp[col_cnpj] = df_exp[col_cnpj].apply(_fmt_cnpj)
 
                 csv = df_exp.to_csv(index=False, sep=';', decimal=',').encode('utf-8-sig')
 
