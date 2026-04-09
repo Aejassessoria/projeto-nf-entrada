@@ -534,12 +534,25 @@ elif pagina == "Regras por NCM":
     st.title("Regras por NCM")
     st.caption("Defina como um NCM deve ser classificado — globalmente ou para uma empresa específica.")
 
+    def _fmt_cnpj_input():
+        d = re.sub(r'\D', '', st.session_state.get('cnpj_manual_regra', ''))[:14]
+        if len(d) <= 2:
+            st.session_state['cnpj_manual_regra'] = d
+        elif len(d) <= 5:
+            st.session_state['cnpj_manual_regra'] = f"{d[:2]}.{d[2:]}"
+        elif len(d) <= 8:
+            st.session_state['cnpj_manual_regra'] = f"{d[:2]}.{d[2:5]}.{d[5:]}"
+        elif len(d) <= 12:
+            st.session_state['cnpj_manual_regra'] = f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:]}"
+        else:
+            st.session_state['cnpj_manual_regra'] = f"{d[:2]}.{d[2:5]}.{d[5:8]}/{d[8:12]}-{d[12:]}"
+
     col1, col2 = st.columns([1, 2])
     with col1:
         st.subheader("Adicionar regra")
         ncm_novo = st.text_input("NCM (código completo ou 2 primeiros dígitos)", placeholder="Ex: 90022010 ou 90")
 
-        cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra")
+        cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra", on_change=_fmt_cnpj_input)
         cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
         cnpj_regra = None
         if cnpj_limpo == '':
