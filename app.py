@@ -126,18 +126,18 @@ def gerar_pdf_relatorio(df: pd.DataFrame, nome_empresa: str) -> bytes:
             if c in ('valor_unitario', 'valor_total', 'icms_bc', 'icms_valor'):
                 try:
                     txt = f"R$ {float(val):,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
-                except Exception:
+                except (ValueError, TypeError):
                     txt = str(val)
             elif c == 'icms_aliq':
                 try:
                     txt = f"{float(val):,.2f}%".replace(',', 'X').replace('.', ',').replace('X', '.')
-                except Exception:
+                except (ValueError, TypeError):
                     txt = str(val)
             elif c == 'quantidade':
                 try:
                     v = float(val)
                     txt = str(int(v)) if v == int(v) else f"{v:,.2f}"
-                except Exception:
+                except (ValueError, TypeError):
                     txt = str(val)
             elif c == 'descricao_produto':
                 txt = str(val)[:55]

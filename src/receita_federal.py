@@ -2,6 +2,7 @@ import requests
 import re
 import time
 import concurrent.futures
+import streamlit as st
 
 from src.database_pg import salvar_cliente, buscar_cliente
 
@@ -65,7 +66,8 @@ def consultar_cnpj(cnpj: str) -> dict | None:
             'cnaes_secundarios_detalhados': cnaes_secundarios_detalhados,
         }
 
-    except Exception:
+    except Exception as e:
+        st.warning(f"Falha ao consultar CNPJ {cnpj_limpo}: {e}")
         return None
 
 
@@ -95,7 +97,8 @@ def consultar_ncm(ncm: str) -> dict | None:
             'ncm': data.get('codigo', ncm_limpo),
             'descricao': data.get('descricao', ''),
         }
-    except Exception:
+    except Exception as e:
+        st.warning(f"Falha ao consultar NCM {ncm_limpo}: {e}")
         return None
 
 

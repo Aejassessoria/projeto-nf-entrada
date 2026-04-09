@@ -403,9 +403,8 @@ def _classificar_item(ncm, descricao, valor_unitario, cnpj_destinatario,
 def classificar_planilha(df: pd.DataFrame, cnpj_destinatario: str, cnae_destinatario: str = '',
                          desc_cnae_destinatario: str = '', cnaes_secundarios: list = None,
                          regras_ncm: dict = None, historico_ncm: dict = None) -> pd.DataFrame:
-    resultados = []
-    for _, row in df.iterrows():
-        resultado = _classificar_item(
+    def _aplicar(row):
+        return _classificar_item(
             ncm=str(row.get('ncm', '') or '').strip(),
             descricao=str(row.get('descricao_produto', '') or '').strip(),
             valor_unitario=float(row.get('valor_unitario', 0) or 0),
@@ -417,12 +416,12 @@ def classificar_planilha(df: pd.DataFrame, cnpj_destinatario: str, cnae_destinat
             historico_ncm=historico_ncm,
             cfop=str(row.get('cfop', '') or '').strip(),
         )
-        resultados.append(resultado)
 
+    resultados = df.apply(_aplicar, axis=1)
     df = df.copy()
-    df['classificacao'] = [r['classificacao'] for r in resultados]
-    df['motivo'] = [r['motivo'] for r in resultados]
-    df['confianca'] = [r['confianca'] for r in resultados]
+    df['classificacao'] = resultados.apply(lambda r: r['classificacao'])
+    df['motivo'] = resultados.apply(lambda r: r['motivo'])
+    df['confianca'] = resultados.apply(lambda r: r['confianca'])
     return df
 
 
