@@ -532,14 +532,16 @@ elif pagina == "Regras por NCM":
     # Carrega apenas empresas que já tiveram itens classificados
     conn = get_connection()
     try:
-        clientes_regra_rows = conn.execute("""
+        cur = conn.cursor()
+        cur.execute("""
             SELECT DISTINCT c.cnpj_destinatario AS cnpj,
                    COALESCE(cl.razao_social, c.nome_destinatario, c.cnpj_destinatario) AS razao_social
             FROM classificacoes c
             LEFT JOIN clientes cl ON cl.cnpj = c.cnpj_destinatario
             WHERE c.cnpj_destinatario IS NOT NULL AND c.cnpj_destinatario != ''
             ORDER BY razao_social
-        """).fetchall()
+        """)
+        clientes_regra_rows = cur.fetchall()
     finally:
         conn.close()
     opcoes_empresa = {'Todas as empresas (global)': ''}
@@ -600,10 +602,12 @@ elif pagina == "Histórico":
 
     conn = get_connection()
     try:
-        clientes_hist_rows = conn.execute(
+        cur = conn.cursor()
+        cur.execute(
             "SELECT DISTINCT cnpj_destinatario, nome_destinatario FROM classificacoes "
             "WHERE confirmado_fiscal=1 AND nome_destinatario IS NOT NULL ORDER BY nome_destinatario"
-        ).fetchall()
+        )
+        clientes_hist_rows = cur.fetchall()
     finally:
         conn.close()
 
