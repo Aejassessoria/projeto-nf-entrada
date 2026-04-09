@@ -488,7 +488,9 @@ if pagina == "Classificar Notas":
                 nome_dest_arquivo = info_cliente['razao_social'].replace(' ', '_') if info_cliente else cnpj_cliente
 
                 cols_exp = [c for c in [
-                    '_hist', 'numero_nf', 'data_emissao', 'ncm', 'cfop',
+                    '_hist', 'numero_nf', 'data_emissao',
+                    'cnpj_emitente', 'nome_emitente',
+                    'ncm', 'cfop',
                     'descricao_produto', 'quantidade', 'unidade',
                     'valor_unitario', 'valor_total',
                     'icms_tributacao', 'origem', 'icms_bc', 'icms_aliq', 'icms_valor',
