@@ -318,8 +318,3 @@ def salvar_classificacoes_batch(lista_de_tuplas):
     conn.close()
 
 
-def get_connection_raw():
-    """Retorna conexão sem RealDictCursor — para uso no app.py com queries diretas."""
-    url = st.secrets["DATABASE_URL"]
-    conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
-    return conn
