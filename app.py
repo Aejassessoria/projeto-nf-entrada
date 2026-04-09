@@ -534,60 +534,33 @@ elif pagina == "Regras por NCM":
     st.title("Regras por NCM")
     st.caption("Defina como um NCM deve ser classificado — globalmente ou para uma empresa específica.")
 
-    # Carrega empresas com histórico + empresas já consultadas (cache clientes)
-    conn = get_connection()
-    try:
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT cnpj, razao_social FROM (
-                SELECT DISTINCT c.cnpj_destinatario AS cnpj,
-                       COALESCE(cl.razao_social, c.nome_destinatario, c.cnpj_destinatario) AS razao_social
-                FROM classificacoes c
-                LEFT JOIN clientes cl ON cl.cnpj = c.cnpj_destinatario
-                WHERE c.cnpj_destinatario IS NOT NULL AND c.cnpj_destinatario != ''
-                UNION
-                SELECT cnpj, razao_social FROM clientes
-                WHERE cnpj IS NOT NULL AND cnpj != ''
-            ) t
-            ORDER BY razao_social
-        """)
-        clientes_regra_rows = cur.fetchall()
-    finally:
-        conn.close()
-    opcoes_empresa = {'Todas as empresas (global)': ''}
-    for r in clientes_regra_rows:
-        nome = r['razao_social'] or r['cnpj']
-        opcoes_empresa[f"{nome} ({formatar_cnpj(r['cnpj'])})"] = r['cnpj']
-    opcoes_empresa['✏️ Digitar CNPJ manualmente...'] = '__manual__'
-
     col1, col2 = st.columns([1, 2])
     with col1:
         st.subheader("Adicionar regra")
         ncm_novo = st.text_input("NCM (código completo ou 2 primeiros dígitos)", placeholder="Ex: 90022010 ou 90")
-        empresa_sel = st.selectbox("Aplicar a", list(opcoes_empresa.keys()), key="regra_empresa")
-        cnpj_regra = opcoes_empresa[empresa_sel]
 
-        if cnpj_regra == '__manual__':
-            cnpj_digitado = st.text_input("CNPJ da empresa", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra")
-            cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
-            if len(cnpj_limpo) == 14:
-                with st.spinner("Consultando empresa..."):
-                    from src.database_pg import buscar_cliente as _buscar_cliente
-                    info = _buscar_cliente(cnpj_limpo) or consultar_cnpj(cnpj_limpo)
-                nome_exibir = info.get('razao_social', cnpj_limpo) if info else cnpj_limpo
-                st.caption(f"Empresa: **{nome_exibir}**")
-                cnpj_regra = cnpj_limpo
-            else:
-                if cnpj_digitado:
-                    st.caption("Digite os 14 dígitos do CNPJ.")
-                cnpj_regra = None
+        cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra")
+        cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
+        cnpj_regra = None
+        if cnpj_limpo == '':
+            cnpj_regra = ''
+            st.caption("Regra global — aplicada a todas as empresas.")
+        elif len(cnpj_limpo) == 14:
+            with st.spinner("Consultando empresa..."):
+                from src.database_pg import buscar_cliente as _buscar_cliente
+                info = _buscar_cliente(cnpj_limpo) or consultar_cnpj(cnpj_limpo)
+            nome_exibir = info.get('razao_social', cnpj_limpo) if info else cnpj_limpo
+            st.caption(f"Empresa: **{nome_exibir}**")
+            cnpj_regra = cnpj_limpo
+        else:
+            st.caption("Digite os 14 dígitos do CNPJ.")
 
         class_nova = st.selectbox("Classificação", [RESULTADO_IMOBILIZADO, RESULTADO_USO_CONSUMO, RESULTADO_REVENDA])
         desc_nova = st.text_input("Descrição", placeholder="Ex: Câmeras e lentes ópticas")
         if st.button("Salvar regra", type="primary", disabled=(cnpj_regra is None)):
             if ncm_novo.strip():
-                salvar_regra_ncm(ncm_novo.strip(), class_nova, desc_nova.strip(), cnpj_regra or '')
-                alvo = empresa_sel if cnpj_regra else "todas as empresas"
+                salvar_regra_ncm(ncm_novo.strip(), class_nova, desc_nova.strip(), cnpj_regra)
+                alvo = nome_exibir if cnpj_regra else "todas as empresas"
                 st.success(f"Regra salva para NCM {ncm_novo} — {alvo}!")
                 st.rerun()
             else:
