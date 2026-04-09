@@ -257,8 +257,21 @@ def _classificar_item(ncm, descricao, valor_unitario, cnpj_destinatario,
     cnaes_todos = [c for c in cnaes_todos if c]
     descs_todos = [desc_cnae_destinatario] + [''] * len(cnaes_secundarios or [])
 
-    # 1. Regra fixa por NCM (maior prioridade — decisão explícita do fiscal)
     cap = ncm[:2] if len(ncm) >= 2 else ''
+
+    # 1. Histórico confirmado pelo fiscal — maior prioridade (decisão humana explícita)
+    if historico_ncm is not None:
+        historico = historico_ncm.get(ncm)
+    else:
+        historico = buscar_historico_ncm(cnpj_destinatario, ncm)
+    if historico:
+        return {
+            'classificacao': historico,
+            'motivo': f'Histórico: NCM {ncm} classificado e confirmado pelo fiscal como {historico}',
+            'confianca': 'alta',
+        }
+
+    # 2. Regra fixa por NCM — fallback quando não há histórico confirmado
     if regras_ncm is not None:
         # Regra específica do CNPJ tem prioridade sobre global ('')
         regra = (regras_ncm.get((ncm, cnpj_destinatario)) or
@@ -271,18 +284,6 @@ def _classificar_item(ncm, descricao, valor_unitario, cnpj_destinatario,
         return {
             'classificacao': regra['classificacao'],
             'motivo': f'Regra cadastrada para NCM {ncm}: {regra.get("descricao", "")}',
-            'confianca': 'alta',
-        }
-
-    # 2. Histórico salvo — classificação anterior confirmada para este cliente/NCM
-    if historico_ncm is not None:
-        historico = historico_ncm.get(ncm)
-    else:
-        historico = buscar_historico_ncm(cnpj_destinatario, ncm)
-    if historico:
-        return {
-            'classificacao': historico,
-            'motivo': f'Histórico: NCM {ncm} classificado anteriormente como {historico} para este cliente',
             'confianca': 'alta',
         }
 
