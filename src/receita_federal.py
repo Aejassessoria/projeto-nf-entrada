@@ -3,12 +3,7 @@ import re
 import time
 import concurrent.futures
 
-try:
-    import streamlit as st
-    _db_url = st.secrets["DATABASE_URL"]
-    from src.database_pg import salvar_cliente, buscar_cliente
-except Exception:
-    from src.database import salvar_cliente, buscar_cliente
+from src.database_pg import salvar_cliente, buscar_cliente
 
 API_URL = "https://brasilapi.com.br/api/cnpj/v1/{cnpj}"
 TIMEOUT = 10

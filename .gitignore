@@ -1,8 +1,9 @@
 .streamlit/secrets.toml
-data/historico.db
+.env
+.claude/settings.local.json
 __pycache__/
 *.pyc
 *.pyo
-.env
-.claude/settings.local.json
 backup_neon_*.sql
+backup_sqlite_*.sql
+data/

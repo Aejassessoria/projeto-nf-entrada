@@ -7,19 +7,11 @@ import io, contextlib
 
 sys.path.insert(0, os.path.dirname(__file__))
 
-try:
-    _db_url = st.secrets["DATABASE_URL"]
-    from src.database_pg import (inicializar_banco, salvar_regra_ncm,
-                               listar_regras_ncm, deletar_regra_ncm, get_connection,
-                               buscar_todas_regras_ncm, buscar_historico_cliente,
-                               salvar_classificacoes_batch, deletar_historico_item,
-                               listar_historico_itens, deletar_cache_cliente)
-except Exception:
-    from src.database import (inicializar_banco, salvar_regra_ncm,
-                               listar_regras_ncm, deletar_regra_ncm, get_connection,
-                               buscar_todas_regras_ncm, buscar_historico_cliente,
-                               salvar_classificacoes_batch, deletar_historico_item,
-                               listar_historico_itens, deletar_cache_cliente)
+from src.database_pg import (inicializar_banco, salvar_regra_ncm,
+                           listar_regras_ncm, deletar_regra_ncm, get_connection,
+                           buscar_todas_regras_ncm, buscar_historico_cliente,
+                           salvar_classificacoes_batch, deletar_historico_item,
+                           listar_historico_itens, deletar_cache_cliente)
 from src.reader import ler_planilha_sat, listar_clientes
 from src.receita_federal import consultar_cnpj, consultar_cnpjs_batch, formatar_cnpj, consultar_ncm
 from src.classifier import (classificar_planilha, resumo_classificacao,

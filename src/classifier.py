@@ -1,11 +1,6 @@
 import pandas as pd
 
-try:
-    import streamlit as st
-    _db_url = st.secrets["DATABASE_URL"]
-    from src.database_pg import buscar_historico_ncm, buscar_regra_ncm
-except Exception:
-    from src.database import buscar_historico_ncm, buscar_regra_ncm
+from src.database_pg import buscar_historico_ncm, buscar_regra_ncm
 
 VALOR_MINIMO_IMOBILIZADO = 1200.0
 
