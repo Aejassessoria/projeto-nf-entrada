@@ -551,6 +551,13 @@ elif pagina == "Regras por NCM":
     with col1:
         st.subheader("Adicionar regra")
         ncm_novo = st.text_input("NCM (código completo ou 2 primeiros dígitos)", placeholder="Ex: 90022010 ou 90")
+        ncm_digits = re.sub(r'\D', '', ncm_novo)
+        if len(ncm_digits) >= 2:
+            _ncm_info = consultar_ncm(ncm_digits)
+            if _ncm_info and _ncm_info.get('descricao'):
+                st.caption(f"📦 {_ncm_info['descricao']}")
+            else:
+                st.caption("NCM não encontrado.")
 
         cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra", on_change=_fmt_cnpj_input)
         cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
