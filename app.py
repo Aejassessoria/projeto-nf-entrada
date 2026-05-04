@@ -149,7 +149,11 @@ def gerar_pdf_relatorio(df: pd.DataFrame, nome_empresa: str) -> bytes:
     return bytes(pdf.output())
 
 
-inicializar_banco()
+@st.cache_resource
+def _init_banco():
+    inicializar_banco()
+
+_init_banco()
 
 st.set_page_config(page_title="Classificador NF Entrada", layout="wide", page_icon="📋")
 

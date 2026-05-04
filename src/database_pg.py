@@ -7,6 +7,8 @@ from contextlib import contextmanager
 
 def get_connection():
     url = st.secrets["DATABASE_URL"]
+    if "sslmode" not in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
     conn = psycopg2.connect(url, cursor_factory=psycopg2.extras.RealDictCursor)
     return conn
 
