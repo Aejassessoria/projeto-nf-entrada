@@ -633,21 +633,13 @@ elif pagina == "Regras por NCM":
             def _render_linha_regra(r, key_prefix):
                 ncm_r = r['ncm']
                 class_r = r['classificacao']
-                desc_r = r.get('descricao') or ''
                 cnpj_r = r.get('cnpj_destinatario', '')
-                idx_class = OPCOES_CLASS_REGRA.index(class_r) if class_r in OPCOES_CLASS_REGRA else 0
-                # Usa cnpj armazenado completo para garantir chave única mesmo com antigas filiais separadas
+                cor = COR_REGRA.get(class_r, '⚪')
                 _wkey = f"{cnpj_r}_{ncm_r}"
-                lc1, lc2, lc3, lc4, lc5 = st.columns([1, 2, 3, 1, 1])
+                lc1, lc2, lc3 = st.columns([1, 3, 1])
                 lc1.markdown(f"`{ncm_r}`")
-                nova_class = lc2.selectbox("", OPCOES_CLASS_REGRA, index=idx_class,
-                                           key=f"cls_{_wkey}", label_visibility="collapsed")
-                nova_desc = lc3.text_input("", value=desc_r,
-                                           key=f"dsc_{_wkey}", label_visibility="collapsed")
-                if lc4.button("💾", key=f"sav_{_wkey}", help="Salvar alterações"):
-                    salvar_regra_ncm(ncm_r, nova_class, nova_desc.strip(), cnpj_r)
-                    st.rerun()
-                if lc5.button("🗑️", key=f"del_{_wkey}", help="Excluir regra"):
+                lc2.markdown(f"{cor} {class_r}")
+                if lc3.button("🗑️", key=f"del_{_wkey}", help="Excluir regra"):
                     deletar_regra_ncm(ncm_r, cnpj_r)
                     st.rerun()
 
@@ -663,15 +655,15 @@ elif pagina == "Regras por NCM":
 
             if globais:
                 with st.expander(f"🌐 Global — todas as empresas ({len(globais)} regra(s))"):
-                    hc1, hc2, hc3, _, _ = st.columns([1, 2, 3, 1, 1])
-                    hc1.caption("NCM"); hc2.caption("Classificação"); hc3.caption("Descrição")
+                    hc1, hc2, hc3 = st.columns([1, 3, 1])
+                    hc1.caption("NCM"); hc2.caption("Classificação")
                     for r in globais:
                         _render_linha_regra(r, "global")
 
             for (cnpj_base_e, nome_e), rules_e in sorted(por_empresa.items(), key=lambda x: x[0][1]):
                 with st.expander(f"🏢 {nome_e} ({len(rules_e)} regra(s))"):
-                    hc1, hc2, hc3, _, _ = st.columns([1, 2, 3, 1, 1])
-                    hc1.caption("NCM"); hc2.caption("Classificação"); hc3.caption("Descrição")
+                    hc1, hc2, hc3 = st.columns([1, 3, 1])
+                    hc1.caption("NCM"); hc2.caption("Classificação")
                     for r in rules_e:
                         _render_linha_regra(r, cnpj_base_e)
 
