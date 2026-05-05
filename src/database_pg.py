@@ -206,9 +206,12 @@ def listar_regras_ncm():
     with _conn() as conn:
         cur = conn.cursor()
         cur.execute("""
-            SELECT r.*, c.razao_social
+            SELECT r.*,
+                (SELECT c.razao_social FROM clientes c
+                 WHERE LEFT(c.cnpj, 8) = LEFT(r.cnpj_destinatario, 8)
+                   AND r.cnpj_destinatario != ''
+                 LIMIT 1) AS razao_social
             FROM regras_ncm r
-            LEFT JOIN clientes c ON LEFT(c.cnpj, 8) = LEFT(r.cnpj_destinatario, 8) AND r.cnpj_destinatario != ''
             ORDER BY r.ncm, r.cnpj_destinatario
         """)
         rows = cur.fetchall()
