@@ -636,16 +636,18 @@ elif pagina == "Regras por NCM":
                 desc_r = r.get('descricao') or ''
                 cnpj_r = r.get('cnpj_destinatario', '')
                 idx_class = OPCOES_CLASS_REGRA.index(class_r) if class_r in OPCOES_CLASS_REGRA else 0
+                # Usa cnpj armazenado completo para garantir chave única mesmo com antigas filiais separadas
+                _wkey = f"{cnpj_r}_{ncm_r}"
                 lc1, lc2, lc3, lc4, lc5 = st.columns([1, 2, 3, 1, 1])
                 lc1.markdown(f"`{ncm_r}`")
                 nova_class = lc2.selectbox("", OPCOES_CLASS_REGRA, index=idx_class,
-                                           key=f"cls_{key_prefix}_{ncm_r}", label_visibility="collapsed")
+                                           key=f"cls_{_wkey}", label_visibility="collapsed")
                 nova_desc = lc3.text_input("", value=desc_r,
-                                           key=f"dsc_{key_prefix}_{ncm_r}", label_visibility="collapsed")
-                if lc4.button("💾", key=f"sav_{key_prefix}_{ncm_r}", help="Salvar alterações"):
+                                           key=f"dsc_{_wkey}", label_visibility="collapsed")
+                if lc4.button("💾", key=f"sav_{_wkey}", help="Salvar alterações"):
                     salvar_regra_ncm(ncm_r, nova_class, nova_desc.strip(), cnpj_r)
                     st.rerun()
-                if lc5.button("🗑️", key=f"del_{key_prefix}_{ncm_r}", help="Excluir regra"):
+                if lc5.button("🗑️", key=f"del_{_wkey}", help="Excluir regra"):
                     deletar_regra_ncm(ncm_r, cnpj_r)
                     st.rerun()
 
