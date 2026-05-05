@@ -1,8 +1,14 @@
 import json
+import re
 import psycopg2
 import psycopg2.extras
 import streamlit as st
 from contextlib import contextmanager
+
+
+def _base_cnpj(cnpj: str) -> str:
+    """Retorna os 8 primeiros dígitos do CNPJ (raiz/base), sem formatação."""
+    return re.sub(r'\D', '', cnpj or '')[:8]
 
 
 def get_connection():
@@ -147,11 +153,11 @@ def buscar_historico_ncm(cnpj_destinatario, ncm):
         cur.execute("""
             SELECT classificacao, COUNT(*) as total
             FROM classificacoes
-            WHERE cnpj_destinatario = %s AND ncm = %s AND confirmado_fiscal = 1
+            WHERE LEFT(cnpj_destinatario, 8) = %s AND ncm = %s AND confirmado_fiscal = 1
             GROUP BY classificacao
             ORDER BY total DESC
             LIMIT 1
-        """, (cnpj_destinatario, ncm))
+        """, (_base_cnpj(cnpj_destinatario), ncm))
         row = cur.fetchone()
         cur.close()
     return row['classificacao'] if row else None
@@ -161,11 +167,12 @@ def buscar_regra_ncm(ncm, cnpj_destinatario=''):
     if not ncm:
         return None
     cap = ncm[:2] if len(ncm) >= 2 else ''
+    base = _base_cnpj(cnpj_destinatario)
     with _conn() as conn:
         cur = conn.cursor()
         cur.execute(
-            "SELECT * FROM regras_ncm WHERE ncm = ANY(%s) AND cnpj_destinatario = %s LIMIT 1",
-            ([ncm, cap], cnpj_destinatario)
+            "SELECT * FROM regras_ncm WHERE ncm = ANY(%s) AND LEFT(cnpj_destinatario, 8) = %s LIMIT 1",
+            ([ncm, cap], base)
         )
         row = cur.fetchone()
         if not row and cnpj_destinatario:
@@ -179,15 +186,19 @@ def buscar_regra_ncm(ncm, cnpj_destinatario=''):
 
 
 def salvar_regra_ncm(ncm, classificacao, descricao='', cnpj_destinatario=''):
+    base = _base_cnpj(cnpj_destinatario) if cnpj_destinatario else ''
     with _conn() as conn:
         cur = conn.cursor()
+        if base:
+            # Remove versões antigas com CNPJ completo (14 dígitos) antes de inserir com base (8 dígitos)
+            cur.execute("DELETE FROM regras_ncm WHERE ncm = %s AND LEFT(cnpj_destinatario, 8) = %s", (ncm, base))
         cur.execute("""
             INSERT INTO regras_ncm (ncm, cnpj_destinatario, classificacao, descricao)
             VALUES (%s, %s, %s, %s)
             ON CONFLICT(ncm, cnpj_destinatario) DO UPDATE SET
                 classificacao=EXCLUDED.classificacao,
                 descricao=EXCLUDED.descricao
-        """, (ncm, cnpj_destinatario, classificacao, descricao))
+        """, (ncm, base, classificacao, descricao))
         cur.close()
 
 
@@ -197,7 +208,7 @@ def listar_regras_ncm():
         cur.execute("""
             SELECT r.*, c.razao_social
             FROM regras_ncm r
-            LEFT JOIN clientes c ON c.cnpj = r.cnpj_destinatario AND r.cnpj_destinatario != ''
+            LEFT JOIN clientes c ON LEFT(c.cnpj, 8) = LEFT(r.cnpj_destinatario, 8) AND r.cnpj_destinatario != ''
             ORDER BY r.ncm, r.cnpj_destinatario
         """)
         rows = cur.fetchall()
@@ -206,9 +217,13 @@ def listar_regras_ncm():
 
 
 def deletar_regra_ncm(ncm, cnpj_destinatario=''):
+    base = _base_cnpj(cnpj_destinatario) if cnpj_destinatario else ''
     with _conn() as conn:
         cur = conn.cursor()
-        cur.execute("DELETE FROM regras_ncm WHERE ncm = %s AND cnpj_destinatario = %s", (ncm, cnpj_destinatario))
+        if base:
+            cur.execute("DELETE FROM regras_ncm WHERE ncm = %s AND LEFT(cnpj_destinatario, 8) = %s", (ncm, base))
+        else:
+            cur.execute("DELETE FROM regras_ncm WHERE ncm = %s AND cnpj_destinatario = ''", (ncm,))
         cur.close()
 
 
@@ -219,7 +234,7 @@ def buscar_todas_regras_ncm() -> dict:
         rows = cur.fetchall()
         cur.close()
     return {
-        (row['ncm'], row['cnpj_destinatario']): {
+        (row['ncm'], _base_cnpj(row['cnpj_destinatario'])): {
             'classificacao': row['classificacao'],
             'descricao': row['descricao'],
         }
@@ -228,21 +243,42 @@ def buscar_todas_regras_ncm() -> dict:
 
 
 def buscar_historico_cliente(cnpj_destinatario) -> dict:
+    base = _base_cnpj(cnpj_destinatario)
     with _conn() as conn:
         cur = conn.cursor()
         cur.execute("""
             SELECT ncm, classificacao
             FROM classificacoes
-            WHERE cnpj_destinatario = %s AND confirmado_fiscal = 1
+            WHERE LEFT(cnpj_destinatario, 8) = %s AND confirmado_fiscal = 1
               AND id IN (
                   SELECT MAX(id) FROM classificacoes
-                  WHERE cnpj_destinatario = %s AND confirmado_fiscal = 1
+                  WHERE LEFT(cnpj_destinatario, 8) = %s AND confirmado_fiscal = 1
                   GROUP BY ncm
               )
-        """, (cnpj_destinatario, cnpj_destinatario))
+        """, (base, base))
         rows = cur.fetchall()
         cur.close()
     return {row['ncm']: row['classificacao'] for row in rows}
+
+
+def corrigir_historico_por_regra(cnpj_base: str, ncm: str, classificacao_nova: str, usuario: str = ''):
+    """Atualiza o registro confirmado mais recente para (cnpj_base, ncm) quando a regra NCM
+    difere do histórico, evitando registros conflitantes."""
+    with _conn() as conn:
+        cur = conn.cursor()
+        cur.execute("""
+            UPDATE classificacoes
+            SET classificacao = %s,
+                usuario = %s
+            WHERE id = (
+                SELECT MAX(id) FROM classificacoes
+                WHERE LEFT(cnpj_destinatario, 8) = %s
+                  AND ncm = %s
+                  AND confirmado_fiscal = 1
+                  AND classificacao != %s
+            )
+        """, (classificacao_nova, usuario or 'regra_ncm', cnpj_base, ncm, classificacao_nova))
+        cur.close()
 
 
 def deletar_historico_item(cnpj_destinatario: str, ncm: str, descricao_produto: str):

@@ -11,7 +11,8 @@ from src.database_pg import (inicializar_banco, salvar_regra_ncm,
                            listar_regras_ncm, deletar_regra_ncm, get_connection,
                            buscar_todas_regras_ncm, buscar_historico_cliente,
                            salvar_classificacoes_batch, deletar_historico_item,
-                           listar_historico_itens, deletar_cache_cliente)
+                           listar_historico_itens, deletar_cache_cliente,
+                           corrigir_historico_por_regra)
 from src.reader import ler_planilha_sat, listar_clientes
 from src.receita_federal import consultar_cnpj, consultar_cnpjs_batch, formatar_cnpj, consultar_ncm
 from src.classifier import (classificar_planilha, resumo_classificacao,
@@ -472,6 +473,15 @@ if pagina == "Classificar Notas":
                     for _, row in df.iterrows()
                 ]
                 salvar_classificacoes_batch(tuplas)
+                # Corrige histórico para itens classificados por regra que divergiam do histórico anterior
+                cnpj_base_ativo = re.sub(r'\D', '', cnpj_cliente or '')[:8]
+                historico_dict = st.session_state.get('historico_ncm_dict', {})
+                for _, row in df.iterrows():
+                    if 'Regra cadastrada' in str(row.get('motivo', '')):
+                        ncm_item = str(row.get('ncm', '')).strip()
+                        class_aplicada = row['classificacao']
+                        if historico_dict.get(ncm_item) and historico_dict[ncm_item] != class_aplicada:
+                            corrigir_historico_por_regra(cnpj_base_ativo, ncm_item, class_aplicada, usuario_logado)
                 # Atualiza o indicador de histórico com os NCMs recém-salvos
                 ncms_salvos = {str(row.get('ncm', '')) for _, row in df.iterrows()}
                 st.session_state['historico_ncm_ativo'] = st.session_state.get('historico_ncm_ativo', set()) | ncms_salvos
@@ -563,7 +573,7 @@ elif pagina == "Regras por NCM":
             else:
                 st.caption("NCM não encontrado.")
 
-        cnpj_digitado = st.text_input("CNPJ da empresa (deixe vazio para regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra", on_change=_fmt_cnpj_input)
+        cnpj_digitado = st.text_input("CNPJ da empresa — matriz ou filial (vazio = regra global)", placeholder="00.000.000/0000-00", max_chars=18, key="cnpj_manual_regra", on_change=_fmt_cnpj_input)
         cnpj_limpo = re.sub(r'\D', '', cnpj_digitado)
         cnpj_regra = None
         nome_exibir = ''
@@ -608,30 +618,60 @@ elif pagina == "Regras por NCM":
 
     with col2:
         st.subheader("Regras cadastradas")
-        fb1, fb2 = st.columns(2)
-        filtro_ncm_regra = fb1.text_input("Buscar por NCM", placeholder="Ex: 84212300", label_visibility="collapsed", key="filtro_ncm_regra")
-        filtro_emp_regra = fb2.text_input("Buscar por empresa", placeholder="Nome ou CNPJ...", label_visibility="collapsed", key="filtro_emp_regra")
+        filtro_ncm_regra = st.text_input("🔍 Filtrar por NCM", placeholder="Ex: 84212300", label_visibility="collapsed", key="filtro_ncm_regra")
+
         regras = listar_regras_ncm()
         if filtro_ncm_regra:
             regras = [r for r in regras if filtro_ncm_regra.strip() in r['ncm']]
-        if filtro_emp_regra:
-            termo = filtro_emp_regra.upper()
-            regras = [r for r in regras if
-                      termo in (r.get('razao_social') or '').upper() or
-                      termo in (r.get('cnpj_destinatario') or '').upper()]
-        if regras:
-            for r in regras:
-                c1, c2 = st.columns([4, 1])
-                with c1:
-                    cor = {'IMOBILIZADO': '🔵', 'USO E CONSUMO': '🟢', 'REVENDA': '🟡'}.get(r['classificacao'], '⚪')
-                    empresa_tag = f" | 🏢 {r.get('razao_social') or formatar_cnpj(r['cnpj_destinatario'])}" if r.get('cnpj_destinatario') else " | 🌐 Global"
-                    st.write(f"{cor} **NCM {r['ncm']}** — {r['classificacao']}{empresa_tag} | {r.get('descricao','')}")
-                with c2:
-                    if st.button("🗑️", key=f"del_{r['ncm']}_{r.get('cnpj_destinatario','')}"):
-                        deletar_regra_ncm(r['ncm'], r.get('cnpj_destinatario', ''))
-                        st.rerun()
-        else:
+
+        if not regras:
             st.info("Nenhuma regra cadastrada ainda.")
+        else:
+            OPCOES_CLASS_REGRA = [RESULTADO_IMOBILIZADO, RESULTADO_USO_CONSUMO, RESULTADO_REVENDA]
+            COR_REGRA = {'IMOBILIZADO': '🔵', 'USO E CONSUMO': '🟢', 'REVENDA': '🟡'}
+
+            def _render_linha_regra(r, key_prefix):
+                ncm_r = r['ncm']
+                class_r = r['classificacao']
+                desc_r = r.get('descricao') or ''
+                cnpj_r = r.get('cnpj_destinatario', '')
+                idx_class = OPCOES_CLASS_REGRA.index(class_r) if class_r in OPCOES_CLASS_REGRA else 0
+                lc1, lc2, lc3, lc4, lc5 = st.columns([1, 2, 3, 1, 1])
+                lc1.markdown(f"`{ncm_r}`")
+                nova_class = lc2.selectbox("", OPCOES_CLASS_REGRA, index=idx_class,
+                                           key=f"cls_{key_prefix}_{ncm_r}", label_visibility="collapsed")
+                nova_desc = lc3.text_input("", value=desc_r,
+                                           key=f"dsc_{key_prefix}_{ncm_r}", label_visibility="collapsed")
+                if lc4.button("💾", key=f"sav_{key_prefix}_{ncm_r}", help="Salvar alterações"):
+                    salvar_regra_ncm(ncm_r, nova_class, nova_desc.strip(), cnpj_r)
+                    st.rerun()
+                if lc5.button("🗑️", key=f"del_{key_prefix}_{ncm_r}", help="Excluir regra"):
+                    deletar_regra_ncm(ncm_r, cnpj_r)
+                    st.rerun()
+
+            # Separar globais e por empresa
+            globais = [r for r in regras if not r.get('cnpj_destinatario')]
+            por_empresa = {}
+            for r in regras:
+                cnpj_e = r.get('cnpj_destinatario', '')
+                if cnpj_e:
+                    cnpj_base_e = re.sub(r'\D', '', cnpj_e)[:8]
+                    nome_e = r.get('razao_social') or cnpj_base_e
+                    por_empresa.setdefault((cnpj_base_e, nome_e), []).append(r)
+
+            if globais:
+                with st.expander(f"🌐 Global — todas as empresas ({len(globais)} regra(s))"):
+                    hc1, hc2, hc3, _, _ = st.columns([1, 2, 3, 1, 1])
+                    hc1.caption("NCM"); hc2.caption("Classificação"); hc3.caption("Descrição")
+                    for r in globais:
+                        _render_linha_regra(r, "global")
+
+            for (cnpj_base_e, nome_e), rules_e in sorted(por_empresa.items(), key=lambda x: x[0][1]):
+                with st.expander(f"🏢 {nome_e} ({len(rules_e)} regra(s))"):
+                    hc1, hc2, hc3, _, _ = st.columns([1, 2, 3, 1, 1])
+                    hc1.caption("NCM"); hc2.caption("Classificação"); hc3.caption("Descrição")
+                    for r in rules_e:
+                        _render_linha_regra(r, cnpj_base_e)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PÁGINA 3 — Histórico

@@ -1,6 +1,12 @@
+import re
+
 import pandas as pd
 
 from src.database_pg import buscar_historico_ncm, buscar_regra_ncm
+
+
+def _base_cnpj(cnpj: str) -> str:
+    return re.sub(r'\D', '', cnpj or '')[:8]
 
 VALOR_MINIMO_IMOBILIZADO = 1200.0
 
@@ -259,23 +265,11 @@ def _classificar_item(ncm, descricao, valor_unitario, cnpj_destinatario,
 
     cap = ncm[:2] if len(ncm) >= 2 else ''
 
-    # 1. Histórico confirmado pelo fiscal — maior prioridade (decisão humana explícita)
-    if historico_ncm is not None:
-        historico = historico_ncm.get(ncm)
-    else:
-        historico = buscar_historico_ncm(cnpj_destinatario, ncm)
-    if historico:
-        return {
-            'classificacao': historico,
-            'motivo': f'Histórico: NCM {ncm} classificado e confirmado pelo fiscal como {historico}',
-            'confianca': 'alta',
-        }
-
-    # 2. Regra fixa por NCM — fallback quando não há histórico confirmado
+    # 1. Regra fixa por NCM — maior prioridade (cadastro explícito)
     if regras_ncm is not None:
-        # Regra específica do CNPJ tem prioridade sobre global ('')
-        regra = (regras_ncm.get((ncm, cnpj_destinatario)) or
-                 regras_ncm.get((cap, cnpj_destinatario)) or
+        base = _base_cnpj(cnpj_destinatario)
+        regra = (regras_ncm.get((ncm, base)) or
+                 regras_ncm.get((cap, base)) or
                  regras_ncm.get((ncm, '')) or
                  regras_ncm.get((cap, '')))
     else:
@@ -284,6 +278,18 @@ def _classificar_item(ncm, descricao, valor_unitario, cnpj_destinatario,
         return {
             'classificacao': regra['classificacao'],
             'motivo': f'Regra cadastrada para NCM {ncm}: {regra.get("descricao", "")}',
+            'confianca': 'alta',
+        }
+
+    # 2. Histórico confirmado pelo fiscal — segunda prioridade
+    if historico_ncm is not None:
+        historico = historico_ncm.get(ncm)
+    else:
+        historico = buscar_historico_ncm(cnpj_destinatario, ncm)
+    if historico:
+        return {
+            'classificacao': historico,
+            'motivo': f'Histórico: NCM {ncm} classificado e confirmado pelo fiscal como {historico}',
             'confianca': 'alta',
         }
 
