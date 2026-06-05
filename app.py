@@ -233,7 +233,10 @@ if pagina == "Classificar Notas":
                 st.markdown(f"🏢 **{nome}** — CNPJ: `{formatar_cnpj(cnpj)}` — {itens_empresa} itens")
 
             st.divider()
-            cliente_sel = st.selectbox("Selecione a empresa para classificar", list(opcoes.keys()))
+            if not opcoes:
+                st.warning("⚠️ Nenhuma empresa compradora encontrada na planilha. Recarregue a página e importe o arquivo novamente.")
+                st.stop()
+                cliente_sel = st.selectbox("Selecione a empresa para classificar", list(opcoes.keys()))
             cnpj_cliente = opcoes[cliente_sel]
             info_cliente = cache_info.get(cnpj_cliente)
 
