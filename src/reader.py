@@ -8,15 +8,20 @@ COLUNAS_ESPERADAS = {
     'TipoOperacaoDocumento': 'tipo_operacao',
     'SituacaoDocumento': 'situacao',
     'IdItem': 'id_item',
+    'PeriodoDeReferencia': 'periodo_referencia',
     'DataEmissaoNfe': 'data_emissao',
     'UfEmitente': 'uf_emitente',
     'UfDestinatario': 'uf_destinatario',
     'CnpjEmitente': 'cnpj_emitente',
     'CpfEmitente': 'cpf_emitente',
+    'CpfDoEmitente': 'cpf_emitente',
     'CnpjCpfEmitente': 'cnpj_emitente_raw',
+    'CnpjOuCpfDoEmitente': 'cnpj_emitente_raw',
     'CnpjDestinatario': 'cnpj_destinatario',
+    'CnpjDoDestinatario': 'cnpj_destinatario',
     'CpfDestinatario': 'cpf_destinatario',
     'CnpjCpfDestinatario': 'cnpj_destinatario_raw',
+    'CnpjOuCpfDoDestinatario': 'cnpj_destinatario_raw',
     'NomeEmitente': 'nome_emitente',
     'NomeDestinatario': 'nome_destinatario',
     'Item': 'item',
@@ -34,6 +39,7 @@ COLUNAS_ESPERADAS = {
     'ClassifOperacao': 'classif_operacao',
     'IcmsTributacao': 'icms_tributacao',
     'ValorIcmsBc': 'icms_bc',
+    'ValorBaseCalculoICMS': 'icms_bc',
     'PercentualIcmsAliq': 'icms_aliq',
     'ValorIcmsSemDifer': 'icms_valor',
 }
@@ -60,7 +66,6 @@ def ler_planilha_sat(arquivo) -> pd.DataFrame:
 
     df = df.loc[:, ~df.columns.astype(str).str.contains('^Unnamed', na=False)]
 
-    # Renomeia colunas por correspondência exata
     mapa = {}
     usados = set()
     for col in df.columns:
@@ -72,13 +77,11 @@ def ler_planilha_sat(arquivo) -> pd.DataFrame:
                 break
     df = df.rename(columns=mapa)
 
-    # Fallbacks para CNPJ
     if 'cnpj_emitente' not in df.columns and 'cnpj_emitente_raw' in df.columns:
         df['cnpj_emitente'] = df['cnpj_emitente_raw']
     if 'cnpj_destinatario' not in df.columns and 'cnpj_destinatario_raw' in df.columns:
         df['cnpj_destinatario'] = df['cnpj_destinatario_raw']
 
-    # Valida colunas essenciais
     essenciais = ['ncm', 'descricao_produto', 'valor_total', 'cnpj_emitente']
     faltando = [c for c in essenciais if c not in df.columns]
     if faltando:
@@ -87,15 +90,12 @@ def ler_planilha_sat(arquivo) -> pd.DataFrame:
             f"Colunas disponíveis: {list(df.columns)}"
         )
 
-    # Limpeza de CNPJs
     for col in ['cnpj_emitente', 'cnpj_destinatario', 'cnpj_emitente_raw', 'cnpj_destinatario_raw']:
         if col in df.columns:
             df[col] = df[col].apply(_limpar_cnpj)
 
-    # Limpeza de NCM
     df['ncm'] = df['ncm'].apply(lambda x: re.sub(r'\D', '', str(x)) if pd.notna(x) else '')
 
-    # Limpeza numérica
     for col in ['valor_total', 'valor_unitario', 'quantidade', 'valor_frete',
                 'icms_bc', 'icms_aliq', 'icms_valor']:
         if col in df.columns:
@@ -104,10 +104,8 @@ def ler_planilha_sat(arquivo) -> pd.DataFrame:
                 errors='coerce'
             ).fillna(0.0)
 
-    # Remove linhas sem NCM
     df = df[df['ncm'].str.len() > 0].reset_index(drop=True)
 
-    # Formata data para padrão brasileiro
     if 'data_emissao' in df.columns:
         datas = pd.to_datetime(df['data_emissao'], errors='coerce', dayfirst=False)
         mask = datas.notna()
